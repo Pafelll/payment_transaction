@@ -1,0 +1,59 @@
+import pandas as pd
+import logging
+from io import BytesIO
+from google.cloud import storage
+
+import constants as const
+
+logger = logging.getLogger()
+
+
+class DataIngestion:
+    def __init__(self):
+        self.client = storage.Client.from_service_account_json(const.CREDENTIALS_FILE)
+        self.bucket_name = const.BUCKET_NAME
+        self.bucket = self.client.bucket(const.BUCKET_NAME)
+        self.filename = "payment_transactions.parquet"
+        self.url = const.BASE_URL
+        self.chunk_size = const.CHUNK_SIZE
+        self.dtypes = const.DTYPES
+
+    def fetch_and_save(self) -> None:
+        df_iter = pd.read_csv(
+            self.url,
+            dtype=self.dtypes,
+            iterator=True,
+            chunksize=10000,
+        )
+        chunks = [df for df in df_iter()]
+        df = pd.concat(chunks, ignore_index=True)
+        df.to_parquet(self.filename, index=False)
+
+    def upload_to_gcs(self, file_path, blob_name, max_retries=3) -> None:
+        blob = self.bucket.blob(blob_name)
+        blob.chunk_size = self.chunk_size
+
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"Uploading {file_path} to {self.bucket_name} (Attempt {attempt + 1})...")
+                blob.upload_from_file(file_path)
+                logger.info(f"Uploaded: gs://{self.bucket_name}/{blob_name}")
+
+                if self.verify_gcs_upload(blob_name):
+                    logger.info(f"Verification successful for {blob_name}")
+                    return
+                else:
+                    logger.info(f"Verification failed for {blob_name}, retrying...")
+            except Exception as e:
+                logger.error(f"Failed to upload {file_path} to GCS: {e}")
+        logger.info(f"Giving up on {file_path} after {max_retries} attempts.")
+
+    def verify_gcs_upload(self, blob_name) -> bool:
+        return storage.Blob(bucket=self.bucket, name=blob_name).exists(self.client)
+
+    def upload_file(self) -> None:
+        df = pd.read_parquet(self.filename)
+        buffer = BytesIO()
+        df.to_parquet(buffer, index=False)
+        buffer.seek(0)
+        self.upload_to_gcs(buffer, self.filename)
