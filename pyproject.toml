@@ -10,5 +10,11 @@ dependencies = [
     "google-cloud-storage>=3.10.1",
     "pandas>=3.0.1",
     "pyarrow>=23.0.1",
+    "pyspark>=4.1.1",
     "tqdm>=4.67.3",
+]
+
+[dependency-groups]
+dev = [
+    "dotenv>=0.9.9",
 ]

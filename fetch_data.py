@@ -1,7 +1,9 @@
+import json
 import pandas as pd
 import logging
 from io import BytesIO
 from google.cloud import storage
+import os
 
 import constants as const
 
@@ -10,28 +12,24 @@ logger = logging.getLogger()
 
 class DataIngestion:
     def __init__(self):
-        self.client = storage.Client.from_service_account_json(const.CREDENTIALS_FILE)
-        self.bucket_name = const.BUCKET_NAME
-        self.bucket = self.client.bucket(const.BUCKET_NAME)
-        self.filename = "payment_transactions.parquet"
+        self.client = storage.Client.from_service_account_json(os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
+        self.bucket_name = os.getenv("TF_VAR_gcs_bucket_name")
+        self.bucket = self.client.bucket(self.bucket_name)
+        self.filename = const.TRANSACTION_FILE_NAME
         self.url = const.BASE_URL
         self.chunk_size = const.CHUNK_SIZE
         self.dtypes = const.DTYPES
 
-    def fetch_and_save(self) -> None:
-        df_iter = pd.read_csv(
+    def fetch_file(self) -> pd.DataFrame:
+        return pd.read_csv(
             self.url,
             dtype=self.dtypes,
-            iterator=True,
-            chunksize=10000,
+            na_values=['', 'NULL', 'null', 'NA', 'N/A'],
+            keep_default_na=True
         )
-        chunks = [df for df in df_iter()]
-        df = pd.concat(chunks, ignore_index=True)
-        df.to_parquet(self.filename, index=False)
 
     def upload_to_gcs(self, file_path, blob_name, max_retries=3) -> None:
         blob = self.bucket.blob(blob_name)
-        blob.chunk_size = self.chunk_size
 
         for attempt in range(max_retries):
             try:
@@ -51,9 +49,29 @@ class DataIngestion:
     def verify_gcs_upload(self, blob_name) -> bool:
         return storage.Blob(bucket=self.bucket, name=blob_name).exists(self.client)
 
-    def upload_file(self) -> None:
-        df = pd.read_parquet(self.filename)
+    def upload_file(self, data) -> None:
+        buffer = BytesIO()
+        data.to_parquet(buffer, index=False)
+        buffer.seek(0)
+        self.upload_to_gcs(buffer, self.filename)
+
+    def upload_description(self, description_path: str = "payment_description.json") -> None:
+        with open(description_path, encoding="utf-8") as f:
+            data = json.load(f)
+
+        rows = [
+            {"column_name": col, "code": entry["code"], "description": entry["description"]}
+            for col, entries in data.items()
+            for entry in entries
+        ]
+        df = pd.DataFrame(rows, columns=["column_name", "code", "description"])
         buffer = BytesIO()
         df.to_parquet(buffer, index=False)
         buffer.seek(0)
-        self.upload_to_gcs(buffer, self.filename)
+        self.upload_to_gcs(buffer, "payment_description.parquet")
+
+
+ingestion = DataIngestion()
+df = ingestion.fetch_file()
+ingestion.upload_file(df)
+ingestion.upload_description()
