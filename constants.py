@@ -1,7 +1,5 @@
-BUCKET_NAME = "transaction-payments-485019"
 BASE_URL = "https://data-api.ecb.europa.eu/service/data/PST?format=csvdata"
 
-CREDENTIALS_FILE = "gcp-finance-secret-key.json"
 TRANSACTION_FILE_NAME = "payment_transactions.parquet"
 CHUNK_SIZE = 8 * 1024 * 1024
 
