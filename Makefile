@@ -1,4 +1,6 @@
-.PHONY: setup install-uv install-java infra-init infra-apply infra-destroy metabase-up metabase-down pipeline run
+SHELL := /bin/bash
+
+.PHONY: setup install-uv install-java infra-init infra-apply infra-destroy metabase-up metabase-down pipeline run bootstrap
 
 install-uv:
 	@which uv > /dev/null 2>&1 || curl -LsSf https://astral.sh/uv/install.sh | sh
