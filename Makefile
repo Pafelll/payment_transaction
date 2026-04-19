@@ -10,6 +10,8 @@ setup: install-uv
 	uv python install 3.13
 	uv venv .venv --python 3.13
 	uv sync
+	@test -f .env || (cp .env_example .env && echo "Created .env from .env_example — fill in your values before continuing.")
+	set -a && source .env && set +a
 
 infra-init:
 	cd terraform && terraform init
@@ -30,3 +32,5 @@ pipeline:
 	PYTHONPATH=src dagster dev
 
 run: infra-apply metabase-up pipeline
+
+bootstrap: setup infra-init infra-apply pipeline

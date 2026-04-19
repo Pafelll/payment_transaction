@@ -67,8 +67,9 @@ Horizontal bar chart ranking countries (`REF_AREA`) by total transaction volume,
 After configuring `.env` (step 2 below), you can use `make` shortcuts:
 
 ```bash
+make bootstrap      # full setup from scratch: install deps, provision infra, start everything
 make setup          # install uv, Python 3.13, venv and all dependencies
-make install-java   # install OpenJDK 17 (optional, if Java is not present)
+make install-java   # install OpenJDK 21 (optional, if Java is not present)
 make infra-init     # terraform init
 make infra-apply    # provision GCS + BigQuery
 make metabase-up    # start Metabase
