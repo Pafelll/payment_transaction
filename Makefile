@@ -27,6 +27,6 @@ metabase-down:
 	docker compose down
 
 pipeline:
-	dagster dev
+	PYTHONPATH=src dagster dev
 
 run: infra-apply metabase-up pipeline

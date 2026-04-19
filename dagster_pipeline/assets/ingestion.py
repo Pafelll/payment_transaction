@@ -1,5 +1,6 @@
 from dagster import asset
-from fetch_data import DataIngestion
+
+from src.fetch_data import DataIngestion
 
 
 @asset

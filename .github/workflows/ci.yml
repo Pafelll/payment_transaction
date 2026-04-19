@@ -26,3 +26,5 @@ jobs:
 
       - name: ruff
         run: uv run ruff check .
+        env:
+          PYTHONPATH: src

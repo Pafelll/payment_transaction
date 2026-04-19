@@ -54,8 +54,13 @@ Metabase (dashboards)
 ### 1. EU Transaction Volume by Type Over Time
 Line chart showing how transaction volumes for each `TYP_TRNSCTN` (e.g. credit transfers, card payments, direct debits) evolved across semi-annual periods. Filter by `UNIT_MEASURE = PN` (pure number) to compare transaction counts.
 
+![EU Transaction Volume by Type](dashboard_images/eu_transaction_volume_by_type.png)
+
 ### 2. Top Countries by Transaction Volume
 Horizontal bar chart ranking countries (`REF_AREA`) by total transaction volume, sorted descending. Shows which EU member states dominate European payment systems.
+
+![Top Countries by Transaction Volume](dashboard_images/top_countries_by_transaction_volume_row.png)
+![Top Countries by Transaction Volume](dashboard_images/top_countries_by_transaction_volume_map.png)
 
 ## Makefile
 
@@ -160,17 +165,17 @@ In Metabase: **Settings → Databases → Add database → BigQuery**
 ## Project Structure
 
 ```
-├── fetch_data.py            # DataIngestion: ECB API → GCS
-├── transform_pyspark.py     # DataTransform: GCS → PySpark → BigQuery
-├── constants.py             # Shared constants (URLs, table names, dtypes)
-├── parse_description.py     # One-time script: payment_description.md → JSON
+├── src/
+│   ├── constants.py             # Shared constants (URLs, table names, dtypes)
+│   ├── fetch_data.py            # DataIngestion: ECB API → GCS
+│   └── transform_pyspark.py     # DataTransform: GCS → PySpark → BigQuery
 ├── dagster_pipeline/
 │   ├── assets/
-│   │   ├── ingestion.py     # Dagster ingestion assets
-│   │   └── transformation.py # Dagster transformation + BQ write assets
-│   └── definitions.py       # Dagster Definitions entry point
-├── terraform/               # GCS bucket + BigQuery dataset
-├── docker-compose.yml       # Metabase
-├── dagster.yaml             # Dagster logs configuration
-└── .env_example             # Environment variables template
+│   │   ├── ingestion.py         # Dagster ingestion assets
+│   │   └── transformation.py   # Dagster transformation + BQ write assets
+│   └── definitions.py           # Dagster Definitions entry point
+├── terraform/                   # GCS bucket + BigQuery dataset
+├── docker-compose.yml           # Metabase
+├── dagster.yaml                 # Dagster logs configuration
+└── .env_example                 # Environment variables template
 ```

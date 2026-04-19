@@ -1,9 +1,10 @@
 import json
-import pandas as pd
 import logging
-from io import BytesIO
-from google.cloud import storage
 import os
+from io import BytesIO
+
+import pandas as pd
+from google.cloud import storage
 
 import constants as const
 
@@ -21,10 +22,7 @@ class DataIngestion:
 
     def fetch_file(self) -> pd.DataFrame:
         return pd.read_csv(
-            self.url,
-            dtype=self.dtypes,
-            na_values=['', 'NULL', 'null', 'NA', 'N/A'],
-            keep_default_na=True
+            self.url, dtype=self.dtypes, na_values=["", "NULL", "null", "NA", "N/A"], keep_default_na=True
         )
 
     def upload_to_gcs(self, file_path, blob_name, max_retries=3) -> None:

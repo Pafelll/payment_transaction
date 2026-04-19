@@ -1,11 +1,12 @@
-import os
 import logging
+import os
 from pathlib import Path
+
 import pandas as pd
-from google.cloud import storage, bigquery
-from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql import functions as F
+from google.cloud import bigquery, storage
 from pyspark.conf import SparkConf
+from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import functions as F
 
 import constants as const
 
@@ -19,9 +20,7 @@ class DataTransform:
         self.bq_dataset = os.getenv("TF_VAR_bq_dataset_name")
         self.project_id = os.getenv("TF_VAR_project")
 
-        conf = SparkConf() \
-            .setMaster("local[*]") \
-            .setAppName("pst_transform")
+        conf = SparkConf().setMaster("local[*]").setAppName("pst_transform")
 
         self.spark = SparkSession.builder.config(conf=conf).getOrCreate()
         self.spark.sparkContext.setLogLevel("WARN")
@@ -50,47 +49,51 @@ class DataTransform:
         logger.info(f"Written {job.output_rows} rows to {destination}")
 
     def transform_eu_trend(self, df: DataFrame) -> pd.DataFrame:
-        return df \
-            .filter(F.col("OBS_VALUE").isNotNull()) \
-            .groupBy("TIME_PERIOD", "TYP_TRNSCTN", "UNIT_MEASURE") \
-            .agg(F.sum("OBS_VALUE").alias("total_value")) \
-            .orderBy("TIME_PERIOD", "TYP_TRNSCTN") \
+        return (
+            df.filter(F.col("OBS_VALUE").isNotNull())
+            .groupBy("TIME_PERIOD", "TYP_TRNSCTN", "UNIT_MEASURE")
+            .agg(F.sum("OBS_VALUE").alias("total_value"))
+            .orderBy("TIME_PERIOD", "TYP_TRNSCTN")
             .toPandas()
+        )
 
     def transform_country_map(self, df: DataFrame) -> pd.DataFrame:
-        return df \
-            .filter(F.col("OBS_VALUE").isNotNull()) \
-            .groupBy("REF_AREA", "TIME_PERIOD", "UNIT_MEASURE") \
-            .agg(F.sum("OBS_VALUE").alias("total_value")) \
-            .orderBy("TIME_PERIOD", "REF_AREA") \
+        return (
+            df.filter(F.col("OBS_VALUE").isNotNull())
+            .groupBy("REF_AREA", "TIME_PERIOD", "UNIT_MEASURE")
+            .agg(F.sum("OBS_VALUE").alias("total_value"))
+            .orderBy("TIME_PERIOD", "REF_AREA")
             .toPandas()
+        )
 
     def transform_online_shift(self, df: DataFrame) -> pd.DataFrame:
-        base = df \
-            .filter(F.col("OBS_VALUE").isNotNull()) \
-            .groupBy("TIME_PERIOD", "INTTN_CHNNL", "UNIT_MEASURE") \
+        base = (
+            df.filter(F.col("OBS_VALUE").isNotNull())
+            .groupBy("TIME_PERIOD", "INTTN_CHNNL", "UNIT_MEASURE")
             .agg(F.sum("OBS_VALUE").alias("channel_value"))
+        )
 
-        total = base \
-            .groupBy("TIME_PERIOD", "UNIT_MEASURE") \
-            .agg(F.sum("channel_value").alias("total_value"))
+        total = base.groupBy("TIME_PERIOD", "UNIT_MEASURE").agg(F.sum("channel_value").alias("total_value"))
 
-        return base.join(total, on=["TIME_PERIOD", "UNIT_MEASURE"]) \
-            .withColumn("share_pct", F.round(F.col("channel_value") / F.col("total_value") * 100, 2)) \
-            .orderBy("TIME_PERIOD", "INTTN_CHNNL") \
+        return (
+            base.join(total, on=["TIME_PERIOD", "UNIT_MEASURE"])
+            .withColumn("share_pct", F.round(F.col("channel_value") / F.col("total_value") * 100, 2))
+            .orderBy("TIME_PERIOD", "INTTN_CHNNL")
             .toPandas()
+        )
 
     def transform_system_dominance(self, df: DataFrame) -> pd.DataFrame:
-        base = df \
-            .filter(F.col("OBS_VALUE").isNotNull()) \
-            .groupBy("TIME_PERIOD", "PYMNT_SYSTM", "UNIT_MEASURE") \
+        base = (
+            df.filter(F.col("OBS_VALUE").isNotNull())
+            .groupBy("TIME_PERIOD", "PYMNT_SYSTM", "UNIT_MEASURE")
             .agg(F.sum("OBS_VALUE").alias("system_value"))
+        )
 
-        total = base \
-            .groupBy("TIME_PERIOD", "UNIT_MEASURE") \
-            .agg(F.sum("system_value").alias("total_value"))
+        total = base.groupBy("TIME_PERIOD", "UNIT_MEASURE").agg(F.sum("system_value").alias("total_value"))
 
-        return base.join(total, on=["TIME_PERIOD", "UNIT_MEASURE"]) \
-            .withColumn("share_pct", F.round(F.col("system_value") / F.col("total_value") * 100, 2)) \
-            .orderBy("TIME_PERIOD", "PYMNT_SYSTM") \
+        return (
+            base.join(total, on=["TIME_PERIOD", "UNIT_MEASURE"])
+            .withColumn("share_pct", F.round(F.col("system_value") / F.col("total_value") * 100, 2))
+            .orderBy("TIME_PERIOD", "PYMNT_SYSTM")
             .toPandas()
+        )
