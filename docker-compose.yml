@@ -1,0 +1,14 @@
+services:
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase
+    ports:
+      - "3000:3000"
+    volumes:
+      - metabase-data:/metabase-data
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/app/gcp-credentials.json:ro
+    environment:
+      MB_DB_FILE: /metabase-data/metabase.db
+
+volumes:
+  metabase-data:

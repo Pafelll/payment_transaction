@@ -17,7 +17,6 @@ class DataIngestion:
         self.bucket = self.client.bucket(self.bucket_name)
         self.filename = const.TRANSACTION_FILE_NAME
         self.url = const.BASE_URL
-        self.chunk_size = const.CHUNK_SIZE
         self.dtypes = const.DTYPES
 
     def fetch_file(self) -> pd.DataFrame:
@@ -69,9 +68,3 @@ class DataIngestion:
         df.to_parquet(buffer, index=False)
         buffer.seek(0)
         self.upload_to_gcs(buffer, "payment_description.parquet")
-
-
-ingestion = DataIngestion()
-df = ingestion.fetch_file()
-ingestion.upload_file(df)
-ingestion.upload_description()
