@@ -16,13 +16,13 @@ setup: install-uv
 	set -a && source .env && set +a
 
 infra-init:
-	cd terraform && terraform init
+	set -a && source .env && set +a && cd terraform && terraform init
 
 infra-apply:
-	cd terraform && terraform apply
+	set -a && source .env && set +a && cd terraform && terraform apply
 
 infra-destroy:
-	cd terraform && terraform destroy
+	set -a && source .env && set +a && cd terraform && terraform destroy
 
 metabase-up:
 	docker compose up -d
